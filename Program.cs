@@ -64,18 +64,8 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
-builder.Services.AddScoped<SpecializationService>();
-builder.Services.AddScoped<DoctorService>();
-builder.Services.AddScoped<DepartmentService>();
-builder.Services.AddScoped<DoctorScheduleService>();
+
 builder.Services.AddScoped<AppointmentService>();
-builder.Services.AddScoped<MedicalRecordService>();
-builder.Services.AddScoped<PrescriptionService>();
-builder.Services.AddScoped<LabReportService>();
-builder.Services.AddScoped<BillService>();
-builder.Services.AddScoped<PaymentService>();
-builder.Services.AddScoped<InsuranceClaimService>();
-builder.Services.AddScoped<InsurancePolicyService>();
 builder.Services.AddScoped<NotificationService>();
 
 // =========================================================
