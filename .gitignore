@@ -1,0 +1,170 @@
+# =========================================================
+# Smart Healthcare Appointment & Medical Assistant
+# =========================================================
+
+# =========================================================
+# .NET / ASP.NET Core
+# =========================================================
+
+bin/
+obj/
+out/
+
+.vs/
+.vscode/
+
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# ASP.NET Core generated files
+wwwroot/lib/
+
+# Test results
+TestResults/
+*.trx
+
+# =========================================================
+# .NET User Secrets
+# =========================================================
+
+# User Secrets are stored outside the project,
+# but keep secret/config files out of Git.
+secrets.json
+
+# =========================================================
+# Environment / Configuration
+# =========================================================
+
+.env
+.env.*
+!.env.example
+
+# Local configuration files
+appsettings.Local.json
+appsettings.local.json
+
+# =========================================================
+# Database / Local Development
+# =========================================================
+
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# =========================================================
+# Logs
+# =========================================================
+
+*.log
+logs/
+
+# =========================================================
+# OS Files
+# =========================================================
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+Thumbs.db
+Desktop.ini
+
+# =========================================================
+# IDE
+# =========================================================
+
+.idea/
+*.iml
+
+# =========================================================
+# Node / React
+# =========================================================
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.npm/
+.yarn/
+.pnpm-store/
+
+dist/
+build/
+coverage/
+
+# React environment files
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# =========================================================
+# Flutter / Dart
+# =========================================================
+
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+
+.pub-cache/
+.pub/
+
+build/
+
+# Flutter generated files
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+
+# Android
+**/android/.gradle/
+**/android/local.properties
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+
+# =========================================================
+# Certificates / Keys / Secrets
+# =========================================================
+
+*.p12
+*.pfx
+*.pem
+*.key
+*.crt
+
+# JWT / API keys / credentials
+*credentials*.json
+*secret*.json
+*secrets*.json
+
+# =========================================================
+# Deployment
+# =========================================================
+
+.vercel/
+.netlify/
+.firebase/
+
+# =========================================================
+# Temporary files
+# =========================================================
+
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# =========================================================
+# Backup files
+# =========================================================
+
+*.bak
+*.backup
