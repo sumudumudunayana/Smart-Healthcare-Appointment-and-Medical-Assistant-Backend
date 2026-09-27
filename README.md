@@ -1,1 +1,0 @@
-# Smart-Healthcare-Appointment-and-Medical-Assistant
