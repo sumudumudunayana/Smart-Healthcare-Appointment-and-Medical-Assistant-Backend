@@ -19,9 +19,7 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
-    // ============================================================
     // BOOK APPOINTMENT
-    // ============================================================
     [HttpPost]
     [Authorize(Roles = "Patient")]
     public async Task<ActionResult<AppointmentResponse>>
