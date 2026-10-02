@@ -19,7 +19,6 @@ public class NotificationsController : ControllerBase
         _notificationService = notificationService;
     }
 
-    // POST: api/Notifications
     // Administrator or Receptionist creates a notification
     [HttpPost]
     [Authorize(Roles = "Administrator,Receptionist")]
