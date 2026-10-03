@@ -16,11 +16,7 @@ public class AuthController : ControllerBase
     }
 
 
-    // ============================================================
     // REGISTER
-    // POST: /api/auth/register
-    // ============================================================
-
     [HttpPost("register")]
     public async Task<ActionResult<AuthResponse>> Register(
         RegisterRequest request)
