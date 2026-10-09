@@ -4,6 +4,8 @@ public class Bill
 {
     public Guid BillId { get; set; }
 
+    public string BillNumber { get; set; } = string.Empty;
+
     public Guid AppointmentId { get; set; }
 
     public Guid PatientId { get; set; }
@@ -23,5 +25,5 @@ public class Bill
     public ICollection<Payment> Payments { get; set; } = new List<Payment>();
 
     public ICollection<InsuranceClaim> InsuranceClaims { get; set; }
-    = new List<InsuranceClaim>();
+        = new List<InsuranceClaim>();
 }
