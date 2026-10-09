@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+
 using SmartHealthcare.API.Data;
 using SmartHealthcare.API.DTOs.DoctorSchedules;
 using SmartHealthcare.API.Models;
@@ -15,6 +16,22 @@ public class DoctorScheduleService
         _context = context;
     }
 
+    // ============================================================
+    // GET DOCTOR ID FROM AUTHENTICATED USER ID
+    // ============================================================
+    public async Task<Guid?> GetDoctorIdFromUserAsync(
+        Guid userId)
+    {
+        return await _context.Doctors
+            .AsNoTracking()
+            .Where(d => d.UserId == userId)
+            .Select(d => (Guid?)d.DoctorId)
+            .FirstOrDefaultAsync();
+    }
+
+    // ============================================================
+    // CREATE DOCTOR SCHEDULE
+    // ============================================================
     public async Task<DoctorScheduleResponse> CreateAsync(
         CreateDoctorScheduleRequest request)
     {
@@ -25,7 +42,8 @@ public class DoctorScheduleService
             );
         }
 
-        if (string.IsNullOrWhiteSpace(request.DayOfWeek))
+        if (string.IsNullOrWhiteSpace(
+                request.DayOfWeek))
         {
             throw new ArgumentException(
                 "Day of week is required."
@@ -96,6 +114,9 @@ public class DoctorScheduleService
             availabilityStatus = "Unavailable";
         }
 
+        // --------------------------------------------------------
+        // Verify doctor exists
+        // --------------------------------------------------------
         bool doctorExists =
             await _context.Doctors
                 .AnyAsync(d =>
@@ -108,6 +129,9 @@ public class DoctorScheduleService
             );
         }
 
+        // --------------------------------------------------------
+        // Prevent duplicate schedule
+        // --------------------------------------------------------
         bool duplicateExists =
             await _context.DoctorSchedules
                 .AnyAsync(s =>
@@ -126,10 +150,15 @@ public class DoctorScheduleService
         var schedule = new DoctorSchedule
         {
             ScheduleId = Guid.NewGuid(),
+
             DoctorId = request.DoctorId,
+
             DayOfWeek = matchedDay,
+
             StartTime = request.StartTime,
+
             EndTime = request.EndTime,
+
             AvailabilityStatus = availabilityStatus
         };
 
@@ -141,6 +170,9 @@ public class DoctorScheduleService
             schedule.ScheduleId);
     }
 
+    // ============================================================
+    // GET SCHEDULES FOR A DOCTOR
+    // ============================================================
     public async Task<List<DoctorScheduleResponse>>
         GetByDoctorIdAsync(Guid doctorId)
     {
@@ -148,29 +180,39 @@ public class DoctorScheduleService
             .AsNoTracking()
             .Include(s => s.Doctor)
                 .ThenInclude(d => d!.User)
-            .Where(s => s.DoctorId == doctorId)
+            .Where(s =>
+                s.DoctorId == doctorId)
             .OrderBy(s => s.DayOfWeek)
             .ThenBy(s => s.StartTime)
             .Select(s => new DoctorScheduleResponse
             {
                 ScheduleId = s.ScheduleId,
+
                 DoctorId = s.DoctorId,
+
                 DoctorName =
                     s.Doctor!.User!.FullName,
+
                 DayOfWeek = s.DayOfWeek,
+
                 StartTime = s.StartTime,
+
                 EndTime = s.EndTime,
+
                 AvailabilityStatus =
                     s.AvailabilityStatus
             })
             .ToListAsync();
     }
 
-
+    // ============================================================
+    // UPDATE DOCTOR SCHEDULE
+    // ============================================================
     public async Task<DoctorScheduleResponse?>
-    UpdateAsync(
-        Guid scheduleId,
-        UpdateDoctorScheduleRequest request)
+        UpdateAsync(
+            Guid scheduleId,
+            UpdateDoctorScheduleRequest request,
+            Guid? authenticatedDoctorId = null)
     {
         DoctorSchedule? schedule =
             await _context.DoctorSchedules
@@ -182,7 +224,23 @@ public class DoctorScheduleService
             return null;
         }
 
-        if (string.IsNullOrWhiteSpace(request.DayOfWeek))
+        // --------------------------------------------------------
+        // Ownership check
+        // --------------------------------------------------------
+        // authenticatedDoctorId is null for Administrator.
+        // If a doctor is performing the operation, the schedule
+        // must belong to that doctor.
+        // --------------------------------------------------------
+        if (authenticatedDoctorId.HasValue &&
+            schedule.DoctorId != authenticatedDoctorId.Value)
+        {
+            throw new UnauthorizedAccessException(
+                "You are not allowed to update this schedule."
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                request.DayOfWeek))
         {
             throw new ArgumentException(
                 "Day of week is required."
@@ -194,14 +252,14 @@ public class DoctorScheduleService
 
         string[] validDays =
         {
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday",
-        "Sunday"
-    };
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday",
+            "Sunday"
+        };
 
         string? matchedDay =
             validDays.FirstOrDefault(day =>
@@ -253,6 +311,9 @@ public class DoctorScheduleService
             availabilityStatus = "Unavailable";
         }
 
+        // --------------------------------------------------------
+        // Prevent duplicate schedule
+        // --------------------------------------------------------
         bool duplicateExists =
             await _context.DoctorSchedules
                 .AnyAsync(s =>
@@ -270,9 +331,13 @@ public class DoctorScheduleService
         }
 
         schedule.DayOfWeek = matchedDay;
+
         schedule.StartTime = request.StartTime;
+
         schedule.EndTime = request.EndTime;
-        schedule.AvailabilityStatus = availabilityStatus;
+
+        schedule.AvailabilityStatus =
+            availabilityStatus;
 
         await _context.SaveChangesAsync();
 
@@ -280,8 +345,12 @@ public class DoctorScheduleService
             scheduleId);
     }
 
-
-    public async Task<bool> DeleteAsync(Guid scheduleId)
+    // ============================================================
+    // DELETE DOCTOR SCHEDULE
+    // ============================================================
+    public async Task<bool> DeleteAsync(
+        Guid scheduleId,
+        Guid? authenticatedDoctorId = null)
     {
         DoctorSchedule? schedule =
             await _context.DoctorSchedules
@@ -293,13 +362,34 @@ public class DoctorScheduleService
             return false;
         }
 
-        _context.DoctorSchedules.Remove(schedule);
+        // --------------------------------------------------------
+        // Ownership check
+        // --------------------------------------------------------
+        // Administrator:
+        // authenticatedDoctorId == null
+        //
+        // Doctor:
+        // authenticatedDoctorId contains their DoctorId
+        // --------------------------------------------------------
+        if (authenticatedDoctorId.HasValue &&
+            schedule.DoctorId != authenticatedDoctorId.Value)
+        {
+            throw new UnauthorizedAccessException(
+                "You are not allowed to delete this schedule."
+            );
+        }
+
+        _context.DoctorSchedules.Remove(
+            schedule);
 
         await _context.SaveChangesAsync();
 
         return true;
     }
 
+    // ============================================================
+    // BUILD SCHEDULE RESPONSE
+    // ============================================================
     private async Task<DoctorScheduleResponse>
         BuildScheduleResponseAsync(
             Guid scheduleId)
@@ -314,12 +404,18 @@ public class DoctorScheduleService
                 .Select(s => new DoctorScheduleResponse
                 {
                     ScheduleId = s.ScheduleId,
+
                     DoctorId = s.DoctorId,
+
                     DoctorName =
                         s.Doctor!.User!.FullName,
+
                     DayOfWeek = s.DayOfWeek,
+
                     StartTime = s.StartTime,
+
                     EndTime = s.EndTime,
+
                     AvailabilityStatus =
                         s.AvailabilityStatus
                 })

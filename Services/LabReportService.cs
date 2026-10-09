@@ -207,4 +207,49 @@ public class LabReportService
             })
             .ToListAsync();
     }
+
+
+    public async Task<List<LabReportResponse>> GetMyDoctorReportsAsync(
+    Guid userId)
+{
+    Doctor? doctor = await _context.Doctors
+        .FirstOrDefaultAsync(d => d.UserId == userId);
+
+    if (doctor == null)
+    {
+        throw new InvalidOperationException(
+            "Doctor profile was not found.");
+    }
+
+    return await _context.LabReports
+        .AsNoTracking()
+        .Include(l => l.Patient)
+            .ThenInclude(p => p!.User)
+        .Include(l => l.Record)
+            .ThenInclude(r => r!.Doctor)
+                .ThenInclude(d => d!.User)
+        .Where(l =>
+            l.Record!.DoctorId == doctor.DoctorId)
+        .OrderByDescending(l => l.UploadedAt)
+        .Select(l => new LabReportResponse
+        {
+            LabReportId = l.LabReportId,
+
+            PatientId = l.PatientId,
+            PatientName = l.Patient!.User!.FullName,
+
+            RecordId = l.RecordId,
+
+            DoctorId = l.Record!.DoctorId,
+            DoctorName = l.Record.Doctor!.User!.FullName,
+
+            ReportName = l.ReportName,
+            ReportType = l.ReportType,
+            FilePath = l.FilePath,
+
+            UploadedAt = l.UploadedAt,
+            UploadedBy = l.UploadedBy
+        })
+        .ToListAsync();
+}
 }

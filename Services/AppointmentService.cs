@@ -512,4 +512,164 @@ public class AppointmentService
 
         return appointment;
     }
+
+
+
+    public async Task<List<AppointmentResponse>>
+    GetAllForAdminAsync()
+    {
+        return await _context.Appointments
+            .AsNoTracking()
+            .Include(a => a.Patient)
+                .ThenInclude(p => p!.User)
+            .Include(a => a.Doctor)
+                .ThenInclude(d => d!.User)
+            .OrderBy(a => a.AppointmentDate)
+            .ThenBy(a => a.AppointmentTime)
+            .Select(a => new AppointmentResponse
+            {
+                AppointmentId =
+                    a.AppointmentId,
+
+                PatientId =
+                    a.PatientId,
+
+                PatientName =
+                    a.Patient!.User!.FullName,
+
+                DoctorId =
+                    a.DoctorId,
+
+                DoctorName =
+                    a.Doctor!.User!.FullName,
+
+                ScheduleId =
+                    a.ScheduleId,
+
+                AppointmentDate =
+                    a.AppointmentDate,
+
+                AppointmentTime =
+                    a.AppointmentTime,
+
+                Status =
+                    a.Status,
+
+                Symptoms =
+                    a.Symptoms,
+
+                CreatedAt =
+                    a.CreatedAt
+            })
+            .ToListAsync();
+    }
+
+
+
+
+
+    public async Task<List<AppointmentResponse>>
+    GetDoctorAppointmentsByDateAsync(
+        Guid doctorId,
+        DateOnly appointmentDate)
+    {
+        // --------------------------------------------------------
+        // Validate doctor
+        // --------------------------------------------------------
+        bool doctorExists =
+            await _context.Doctors
+                .AnyAsync(d => d.DoctorId == doctorId);
+
+        if (!doctorExists)
+        {
+            throw new ArgumentException(
+                "The selected doctor was not found."
+            );
+        }
+
+        // --------------------------------------------------------
+        // Get appointments for selected doctor and date
+        // --------------------------------------------------------
+        return await _context.Appointments
+            .AsNoTracking()
+            .Include(a => a.Patient)
+                .ThenInclude(p => p!.User)
+            .Include(a => a.Doctor)
+                .ThenInclude(d => d!.User)
+            .Where(a =>
+                a.DoctorId == doctorId &&
+                a.AppointmentDate == appointmentDate &&
+                a.Status != "Cancelled")
+            .OrderBy(a => a.AppointmentTime)
+            .Select(a => new AppointmentResponse
+            {
+                AppointmentId = a.AppointmentId,
+
+                PatientId = a.PatientId,
+
+                PatientName = a.Patient!.User!.FullName,
+
+                DoctorId = a.DoctorId,
+
+                DoctorName = a.Doctor!.User!.FullName,
+
+                ScheduleId = a.ScheduleId,
+
+                AppointmentDate = a.AppointmentDate,
+
+                AppointmentTime = a.AppointmentTime,
+
+                Status = a.Status,
+
+                Symptoms = a.Symptoms,
+
+                CreatedAt = a.CreatedAt
+            })
+            .ToListAsync();
+    }
+
+
+
+
+    public async Task<List<AppointmentResponse>>
+    GetAllForReceptionistAsync()
+    {
+        return await _context.Appointments
+            .AsNoTracking()
+            .Include(a => a.Patient)
+                .ThenInclude(p => p!.User)
+            .Include(a => a.Doctor)
+                .ThenInclude(d => d!.User)
+            .OrderBy(a => a.AppointmentDate)
+            .ThenBy(a => a.AppointmentTime)
+            .Select(a => new AppointmentResponse
+            {
+                AppointmentId = a.AppointmentId,
+
+                PatientId = a.PatientId,
+
+                PatientName =
+                    a.Patient!.User!.FullName,
+
+                DoctorId = a.DoctorId,
+
+                DoctorName =
+                    a.Doctor!.User!.FullName,
+
+                ScheduleId = a.ScheduleId,
+
+                AppointmentDate =
+                    a.AppointmentDate,
+
+                AppointmentTime =
+                    a.AppointmentTime,
+
+                Status = a.Status,
+
+                Symptoms = a.Symptoms,
+
+                CreatedAt = a.CreatedAt
+            })
+            .ToListAsync();
+    }
 }

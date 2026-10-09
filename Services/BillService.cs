@@ -83,14 +83,35 @@ public class BillService
                 "A bill already exists for this appointment.");
         }
 
+        // ========================================================
+        // GENERATE BILL NUMBER
+        // ========================================================
+
+        int existingBillCount = await _context.Bills.CountAsync();
+
+        string billNumber =
+            $"BILL-{existingBillCount + 1:D6}";
+
+        // ========================================================
+        // CREATE BILL
+        // ========================================================
+
         var bill = new Bill
         {
             BillId = Guid.NewGuid(),
+
+            BillNumber = billNumber,
+
             AppointmentId = appointment.AppointmentId,
+
             PatientId = appointment.PatientId,
+
             TotalAmount = request.TotalAmount,
+
             BillStatus = "Pending",
-            GeneratedDate = DateOnly.FromDateTime(DateTime.UtcNow)
+
+            GeneratedDate =
+                DateOnly.FromDateTime(DateTime.UtcNow)
         };
 
         _context.Bills.Add(bill);
@@ -100,16 +121,25 @@ public class BillService
         return new BillResponse
         {
             BillId = bill.BillId,
+
+            BillNumber = bill.BillNumber,
+
             AppointmentId = bill.AppointmentId,
 
             PatientId = bill.PatientId,
-            PatientName = appointment.Patient.User.FullName,
+
+            PatientName =
+                appointment.Patient.User.FullName,
 
             DoctorId = appointment.DoctorId,
-            DoctorName = appointment.Doctor.User.FullName,
+
+            DoctorName =
+                appointment.Doctor.User.FullName,
 
             TotalAmount = bill.TotalAmount,
+
             BillStatus = bill.BillStatus,
+
             GeneratedDate = bill.GeneratedDate
         };
     }
@@ -161,7 +191,8 @@ public class BillService
         bool hasAccess =
             isAdministrator ||
             isReceptionist ||
-            (isPatient && bill.Patient?.UserId == userId) ||
+            (isPatient &&
+             bill.Patient?.UserId == userId) ||
             (isDoctor &&
              bill.Appointment?.Doctor?.UserId == userId);
 
@@ -189,17 +220,30 @@ public class BillService
         return new BillResponse
         {
             BillId = bill.BillId,
+
+            BillNumber = bill.BillNumber,
+
             AppointmentId = bill.AppointmentId,
 
             PatientId = bill.PatientId,
-            PatientName = bill.Patient.User.FullName,
 
-            DoctorId = bill.Appointment.DoctorId,
-            DoctorName = bill.Appointment.Doctor.User.FullName,
+            PatientName =
+                bill.Patient.User.FullName,
 
-            TotalAmount = bill.TotalAmount,
-            BillStatus = bill.BillStatus,
-            GeneratedDate = bill.GeneratedDate
+            DoctorId =
+                bill.Appointment.DoctorId,
+
+            DoctorName =
+                bill.Appointment.Doctor.User.FullName,
+
+            TotalAmount =
+                bill.TotalAmount,
+
+            BillStatus =
+                bill.BillStatus,
+
+            GeneratedDate =
+                bill.GeneratedDate
         };
     }
 
@@ -222,22 +266,90 @@ public class BillService
             .Include(b => b.Appointment)
                 .ThenInclude(a => a!.Doctor)
                     .ThenInclude(d => d!.User)
-            .Where(b => b.PatientId == patient.PatientId)
-            .OrderByDescending(b => b.GeneratedDate)
+            .Where(b =>
+                b.PatientId == patient.PatientId)
+            .OrderByDescending(b =>
+                b.GeneratedDate)
             .Select(b => new BillResponse
             {
                 BillId = b.BillId,
-                AppointmentId = b.AppointmentId,
 
-                PatientId = b.PatientId,
-                PatientName = b.Patient!.User!.FullName,
+                BillNumber = b.BillNumber,
 
-                DoctorId = b.Appointment!.DoctorId,
-                DoctorName = b.Appointment.Doctor!.User!.FullName,
+                AppointmentId =
+                    b.AppointmentId,
 
-                TotalAmount = b.TotalAmount,
-                BillStatus = b.BillStatus,
-                GeneratedDate = b.GeneratedDate
+                PatientId =
+                    b.PatientId,
+
+                PatientName =
+                    b.Patient!.User!.FullName,
+
+                DoctorId =
+                    b.Appointment!.DoctorId,
+
+                DoctorName =
+                    b.Appointment
+                        .Doctor!
+                        .User!
+                        .FullName,
+
+                TotalAmount =
+                    b.TotalAmount,
+
+                BillStatus =
+                    b.BillStatus,
+
+                GeneratedDate =
+                    b.GeneratedDate
+            })
+            .ToListAsync();
+    }
+
+    public async Task<List<BillResponse>>
+        GetAllForReceptionistAsync()
+    {
+        return await _context.Bills
+            .AsNoTracking()
+            .Include(b => b.Patient)
+                .ThenInclude(p => p!.User)
+            .Include(b => b.Appointment)
+                .ThenInclude(a => a!.Doctor)
+                    .ThenInclude(d => d!.User)
+            .OrderByDescending(b =>
+                b.GeneratedDate)
+            .Select(b => new BillResponse
+            {
+                BillId = b.BillId,
+
+                BillNumber = b.BillNumber,
+
+                AppointmentId =
+                    b.AppointmentId,
+
+                PatientId =
+                    b.PatientId,
+
+                PatientName =
+                    b.Patient!.User!.FullName,
+
+                DoctorId =
+                    b.Appointment!.DoctorId,
+
+                DoctorName =
+                    b.Appointment
+                        .Doctor!
+                        .User!
+                        .FullName,
+
+                TotalAmount =
+                    b.TotalAmount,
+
+                BillStatus =
+                    b.BillStatus,
+
+                GeneratedDate =
+                    b.GeneratedDate
             })
             .ToListAsync();
     }

@@ -75,4 +75,27 @@ public class UserService
             Status = user.Status
         };
     }
+
+
+
+    public async Task<List<UserResponse>> GetAllAsync()
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .Include(u => u.Role)
+            .OrderBy(u => u.FullName)
+            .Select(u => new UserResponse
+            {
+                UserId = u.UserId,
+                FullName = u.FullName,
+                Email = u.Email,
+                Phone = u.Phone,
+                Role = u.Role != null
+                    ? u.Role.RoleName
+                    : string.Empty,
+                Status = u.Status,
+                CreatedAt = u.CreatedAt
+            })
+            .ToListAsync();
+    }
 }

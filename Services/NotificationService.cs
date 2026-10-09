@@ -164,4 +164,22 @@ public class NotificationService
             ReadAt = notification.ReadAt
         };
     }
+
+
+
+    public async Task<List<object>> GetNotificationUsersAsync()
+{
+    return await _context.Users
+        .AsNoTracking()
+        .OrderBy(u => u.FullName)
+        .Select(u => new
+        {
+            userId = u.UserId,
+            fullName = u.FullName,
+            email = u.Email,
+            status = u.Status
+        })
+        .Cast<object>()
+        .ToListAsync();
+}
 }
