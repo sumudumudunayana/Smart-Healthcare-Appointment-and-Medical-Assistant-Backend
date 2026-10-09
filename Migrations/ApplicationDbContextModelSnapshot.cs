@@ -68,13 +68,11 @@ namespace SmartHealthcare.API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Reasoning")
-                        .HasMaxLength(10000)
-                        .HasColumnType("character varying(10000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("Recommendation")
                         .IsRequired()
-                        .HasMaxLength(5000)
-                        .HasColumnType("character varying(5000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("RecommendationType")
                         .IsRequired()
@@ -152,12 +150,10 @@ namespace SmartHealthcare.API.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("InputData")
-                        .HasMaxLength(10000)
-                        .HasColumnType("character varying(10000)");
+                        .HasColumnType("text");
 
                     b.Property<string>("OutputData")
-                        .HasMaxLength(10000)
-                        .HasColumnType("character varying(10000)");
+                        .HasColumnType("text");
 
                     b.Property<DateTime>("StartedAt")
                         .HasColumnType("timestamp with time zone");
@@ -235,6 +231,11 @@ namespace SmartHealthcare.API.Migrations
                     b.Property<Guid>("AppointmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("BillNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
                     b.Property<string>("BillStatus")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -253,6 +254,9 @@ namespace SmartHealthcare.API.Migrations
                     b.HasKey("BillId");
 
                     b.HasIndex("AppointmentId")
+                        .IsUnique();
+
+                    b.HasIndex("BillNumber")
                         .IsUnique();
 
                     b.HasIndex("PatientId");
@@ -794,6 +798,39 @@ namespace SmartHealthcare.API.Migrations
                     b.ToTable("Prescriptions");
                 });
 
+            modelBuilder.Entity("SmartHealthcare.API.Models.RefreshToken", b =>
+                {
+                    b.Property<Guid>("RefreshTokenId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("RefreshTokenId");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("RefreshTokens");
+                });
+
             modelBuilder.Entity("SmartHealthcare.API.Models.Role", b =>
                 {
                     b.Property<Guid>("RoleId")
@@ -1192,6 +1229,17 @@ namespace SmartHealthcare.API.Migrations
                     b.Navigation("Record");
                 });
 
+            modelBuilder.Entity("SmartHealthcare.API.Models.RefreshToken", b =>
+                {
+                    b.HasOne("SmartHealthcare.API.Models.User", "User")
+                        .WithMany("RefreshTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartHealthcare.API.Models.User", b =>
                 {
                     b.HasOne("SmartHealthcare.API.Models.Role", "Role")
@@ -1283,6 +1331,8 @@ namespace SmartHealthcare.API.Migrations
                     b.Navigation("Notifications");
 
                     b.Navigation("Patient");
+
+                    b.Navigation("RefreshTokens");
                 });
 #pragma warning restore 612, 618
         }
