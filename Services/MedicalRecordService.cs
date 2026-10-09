@@ -211,6 +211,60 @@ public class MedicalRecordService
     }
 
 
+    public async Task<List<MedicalRecordResponse>> GetMyDoctorRecordsAsync(
+    Guid userId)
+    {
+        // Find the doctor using the logged-in user's ID
+        Doctor? doctor = await _context.Doctors
+            .Include(d => d.User)
+            .FirstOrDefaultAsync(d => d.UserId == userId);
+
+        if (doctor == null)
+        {
+            throw new InvalidOperationException(
+                "Doctor profile was not found.");
+        }
+
+        if (doctor.User == null)
+        {
+            throw new InvalidOperationException(
+                "Doctor user profile was not found.");
+        }
+
+        // Get only medical records created by this doctor
+        return await _context.MedicalRecords
+            .AsNoTracking()
+            .Include(r => r.Patient)
+                .ThenInclude(p => p!.User)
+            .Include(r => r.Doctor)
+                .ThenInclude(d => d!.User)
+            .Include(r => r.Appointment)
+            .Where(r => r.DoctorId == doctor.DoctorId)
+            .OrderByDescending(r => r.CreatedAt)
+            .Select(r => new MedicalRecordResponse
+            {
+                RecordId = r.RecordId,
+
+                PatientId = r.PatientId,
+                PatientName = r.Patient!.User!.FullName,
+
+                DoctorId = r.DoctorId,
+                DoctorName = r.Doctor!.User!.FullName,
+
+                AppointmentId = r.AppointmentId,
+                AppointmentDate = r.Appointment!.AppointmentDate,
+                AppointmentTime = r.Appointment.AppointmentTime,
+
+                Diagnosis = r.Diagnosis,
+                Treatment = r.Treatment,
+                Notes = r.Notes,
+
+                CreatedAt = r.CreatedAt
+            })
+            .ToListAsync();
+    }
+
+
     public async Task<List<MedicalRecordResponse>> GetMyRecordsAsync(
     Guid userId)
     {

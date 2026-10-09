@@ -236,4 +236,40 @@ public class PaymentService
             })
             .ToListAsync();
     }
+
+
+    public async Task<List<PaymentResponse>> GetAllForReceptionistAsync()
+    {
+        return await _context.Payments
+            .AsNoTracking()
+            .Include(p => p.Bill)
+                .ThenInclude(b => b!.Patient)
+                    .ThenInclude(p => p!.User)
+            .OrderByDescending(p => p.PaymentDate)
+            .Select(p => new PaymentResponse
+            {
+                PaymentId = p.PaymentId,
+                BillId = p.BillId,
+
+                PatientId = p.Bill!.PatientId,
+                PatientName = p.Bill.Patient!.User!.FullName,
+
+                BillAmount = p.Bill.TotalAmount,
+                PaymentAmount = p.Amount,
+
+                RemainingAmount =
+                    p.Bill.TotalAmount -
+                    _context.Payments
+                        .Where(x =>
+                            x.BillId == p.BillId &&
+                            x.PaymentStatus == "Completed")
+                        .Sum(x => (decimal?)x.Amount) ?? 0,
+
+                PaymentMethod = p.PaymentMethod,
+                PaymentDate = p.PaymentDate,
+                PaymentStatus = p.PaymentStatus,
+                BillStatus = p.Bill.BillStatus
+            })
+            .ToListAsync();
+    }
 }

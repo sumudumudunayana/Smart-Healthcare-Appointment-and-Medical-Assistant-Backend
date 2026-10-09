@@ -222,4 +222,47 @@ public class PrescriptionService
             })
             .ToListAsync();
     }
+
+
+    public async Task<List<PrescriptionResponse>> GetMyDoctorPrescriptionsAsync(
+    Guid userId)
+    {
+        Doctor? doctor = await _context.Doctors
+            .FirstOrDefaultAsync(d => d.UserId == userId);
+
+        if (doctor == null)
+            throw new InvalidOperationException("Doctor profile was not found.");
+
+        return await _context.Prescriptions
+            .AsNoTracking()
+            .Include(p => p.Record)
+                .ThenInclude(r => r!.Patient)
+                    .ThenInclude(p => p!.User)
+            .Include(p => p.Record)
+                .ThenInclude(r => r!.Doctor)
+                    .ThenInclude(d => d!.User)
+            .Where(p =>
+                p.Record!.DoctorId == doctor.DoctorId)
+            .OrderByDescending(p => p.CreatedAt)
+            .Select(p => new PrescriptionResponse
+            {
+                PrescriptionId = p.PrescriptionId,
+                RecordId = p.RecordId,
+
+                PatientId = p.Record!.PatientId,
+                PatientName = p.Record.Patient!.User!.FullName,
+
+                DoctorId = p.Record.DoctorId,
+                DoctorName = p.Record.Doctor!.User!.FullName,
+
+                Medicine = p.Medicine,
+                Dosage = p.Dosage,
+                Duration = p.Duration,
+                Frequency = p.Frequency,
+                Instructions = p.Instructions,
+
+                CreatedAt = p.CreatedAt
+            })
+            .ToListAsync();
+    }
 }

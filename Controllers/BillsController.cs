@@ -126,4 +126,17 @@ public class BillsController : ControllerBase
 
         return userId;
     }
+
+
+    // GET: api/Bills/receptionist
+    // Receptionist gets all bills
+    [HttpGet("receptionist")]
+    [Authorize(Roles = "Receptionist")]
+    public async Task<ActionResult<List<BillResponse>>> GetAllForReceptionist()
+    {
+        List<BillResponse> response =
+            await _billService.GetAllForReceptionistAsync();
+
+        return Ok(response);
+    }
 }

@@ -1,8 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+
 using SmartHealthcare.API.Data;
 using SmartHealthcare.API.DTOs.Authentication;
 using SmartHealthcare.API.Models;
@@ -80,9 +83,11 @@ public class AuthService
 
         await _context.SaveChangesAsync();
 
-        return GenerateAuthResponse(user, patientRole.RoleName);
+        return await GenerateAuthResponseAsync(
+            user,
+            patientRole.RoleName
+        );
     }
-
 
     // ============================================================
     // LOGIN
@@ -131,24 +136,186 @@ public class AuthService
             );
         }
 
-        return GenerateAuthResponse(
+        return await GenerateAuthResponseAsync(
             user,
             user.Role.RoleName
         );
     }
 
+    // ============================================================
+    // REFRESH ACCESS TOKEN
+    // ============================================================
+
+    public async Task<AuthResponse> RefreshTokenAsync(
+        string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            throw new UnauthorizedAccessException(
+                "Refresh token is required."
+            );
+        }
+
+        RefreshToken? storedToken = await _context.RefreshTokens
+            .Include(r => r.User)
+            .ThenInclude(u => u!.Role)
+            .FirstOrDefaultAsync(r => r.Token == refreshToken);
+
+        if (storedToken == null)
+        {
+            throw new UnauthorizedAccessException(
+                "Invalid refresh token."
+            );
+        }
+
+        if (storedToken.RevokedAt.HasValue)
+        {
+            throw new UnauthorizedAccessException(
+                "Refresh token has been revoked."
+            );
+        }
+
+        if (storedToken.ExpiresAt <= DateTime.UtcNow)
+        {
+            throw new UnauthorizedAccessException(
+                "Refresh token has expired."
+            );
+        }
+
+        if (storedToken.User == null)
+        {
+            throw new UnauthorizedAccessException(
+                "User associated with refresh token was not found."
+            );
+        }
+
+        User user = storedToken.User;
+
+        if (user.Status != "Active")
+        {
+            throw new UnauthorizedAccessException(
+                "This account is not active."
+            );
+        }
+
+        if (user.Role == null)
+        {
+            throw new InvalidOperationException(
+                "User role was not found."
+            );
+        }
+
+        // Revoke the old refresh token.
+        storedToken.RevokedAt = DateTime.UtcNow;
+
+        // Generate a completely new authentication response.
+        AuthResponse response = await GenerateAuthResponseAsync(
+            user,
+            user.Role.RoleName
+        );
+
+        await _context.SaveChangesAsync();
+
+        return response;
+    }
 
     // ============================================================
-    // JWT GENERATION
+    // LOGOUT / REVOKE REFRESH TOKEN
     // ============================================================
 
-    private AuthResponse GenerateAuthResponse(
+    public async Task RevokeRefreshTokenAsync(
+        string refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+        {
+            return;
+        }
+
+        RefreshToken? storedToken =
+            await _context.RefreshTokens
+                .FirstOrDefaultAsync(r => r.Token == refreshToken);
+
+        if (storedToken == null)
+        {
+            return;
+        }
+
+        if (!storedToken.RevokedAt.HasValue)
+        {
+            storedToken.RevokedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    // ============================================================
+    // GENERATE AUTH RESPONSE
+    // ============================================================
+
+    private async Task<AuthResponse> GenerateAuthResponseAsync(
         User user,
         string role)
     {
-        string? jwtKey = _configuration["Jwt:Key"];
-        string? jwtIssuer = _configuration["Jwt:Issuer"];
-        string? jwtAudience = _configuration["Jwt:Audience"];
+        string accessToken = GenerateAccessToken(
+            user,
+            role
+        );
+
+        string refreshTokenValue =
+            GenerateRefreshTokenValue();
+
+        int refreshTokenExpiresInDays =
+            _configuration.GetValue<int>(
+                "Jwt:RefreshTokenExpiresInDays"
+            );
+
+        if (refreshTokenExpiresInDays <= 0)
+        {
+            refreshTokenExpiresInDays = 7;
+        }
+
+        var refreshToken = new RefreshToken
+        {
+            RefreshTokenId = Guid.NewGuid(),
+            UserId = user.UserId,
+            Token = refreshTokenValue,
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddDays(
+                refreshTokenExpiresInDays
+            )
+        };
+
+        _context.RefreshTokens.Add(refreshToken);
+
+        await _context.SaveChangesAsync();
+
+        return new AuthResponse
+        {
+            Token = accessToken,
+            RefreshToken = refreshTokenValue,
+            UserId = user.UserId,
+            FullName = user.FullName,
+            Email = user.Email,
+            Role = role
+        };
+    }
+
+    // ============================================================
+    // GENERATE JWT ACCESS TOKEN
+    // ============================================================
+
+    private string GenerateAccessToken(
+        User user,
+        string role)
+    {
+        string? jwtKey =
+            _configuration["Jwt:Key"];
+
+        string? jwtIssuer =
+            _configuration["Jwt:Issuer"];
+
+        string? jwtAudience =
+            _configuration["Jwt:Audience"];
 
         if (string.IsNullOrWhiteSpace(jwtKey))
         {
@@ -175,6 +342,11 @@ public class AuthService
             _configuration.GetValue<int>(
                 "Jwt:ExpiresInMinutes"
             );
+
+        if (expiresInMinutes <= 0)
+        {
+            expiresInMinutes = 60;
+        }
 
         var claims = new List<Claim>
         {
@@ -218,17 +390,18 @@ public class AuthService
             signingCredentials: credentials
         );
 
-        string tokenString =
-            new JwtSecurityTokenHandler()
-                .WriteToken(token);
+        return new JwtSecurityTokenHandler()
+            .WriteToken(token);
+    }
 
-        return new AuthResponse
-        {
-            Token = tokenString,
-            UserId = user.UserId,
-            FullName = user.FullName,
-            Email = user.Email,
-            Role = role
-        };
+    // ============================================================
+    // GENERATE REFRESH TOKEN
+    // ============================================================
+
+    private string GenerateRefreshTokenValue()
+    {
+        byte[] randomBytes = RandomNumberGenerator.GetBytes(64);
+
+        return Convert.ToBase64String(randomBytes);
     }
 }

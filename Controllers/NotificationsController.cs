@@ -19,6 +19,7 @@ public class NotificationsController : ControllerBase
         _notificationService = notificationService;
     }
 
+    // POST: api/Notifications
     // Administrator or Receptionist creates a notification
     [HttpPost]
     [Authorize(Roles = "Administrator,Receptionist")]
@@ -122,5 +123,18 @@ public class NotificationsController : ControllerBase
         }
 
         return userId;
+    }
+
+
+    // GET: api/Notifications/users
+    // Administrator or Receptionist gets users who can receive notifications
+    [HttpGet("users")]
+    [Authorize(Roles = "Administrator,Receptionist")]
+    public async Task<ActionResult<List<object>>> GetUsers()
+    {
+        List<object> users =
+            await _notificationService.GetNotificationUsersAsync();
+
+        return Ok(users);
     }
 }

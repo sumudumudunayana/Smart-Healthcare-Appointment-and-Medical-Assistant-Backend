@@ -125,4 +125,36 @@ public class LabReportsController : ControllerBase
             });
         }
     }
+
+    [HttpGet("doctor/my")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<ActionResult<List<LabReportResponse>>>
+    GetMyDoctorReports()
+    {
+        string? userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out Guid userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid user identity."
+            });
+        }
+
+        try
+        {
+            List<LabReportResponse> reports =
+                await _labReportService.GetMyDoctorReportsAsync(userId);
+
+            return Ok(reports);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }

@@ -88,4 +88,15 @@ public class UsersController : ControllerBase
             });
         }
     }
+
+
+    [HttpGet]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<List<UserResponse>>> GetAll()
+    {
+        List<UserResponse> users =
+            await _userService.GetAllAsync();
+
+        return Ok(users);
+    }
 }

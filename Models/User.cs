@@ -31,4 +31,7 @@ public class User
 
     public ICollection<AIApproval> AIApprovals { get; set; }
         = new List<AIApproval>();
+
+    public ICollection<RefreshToken> RefreshTokens { get; set; }
+    = new List<RefreshToken>();
 }
