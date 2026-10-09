@@ -1,6 +1,6 @@
-namespace SmartHealthcare.API.DTOs.Authentication;
+namespace SmartHealthcare.API.DTOs.Receptionists;
 
-public class RegisterRequest
+public class CreateReceptionistRequest
 {
     public string FullName { get; set; } = string.Empty;
 
