@@ -125,4 +125,35 @@ public class PrescriptionsController : ControllerBase
             });
         }
     }
+
+    [HttpGet("doctor/my")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<ActionResult<List<PrescriptionResponse>>> GetMyDoctorPrescriptions()
+    {
+        string? userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out Guid userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid user identity."
+            });
+        }
+
+        try
+        {
+            List<PrescriptionResponse> prescriptions =
+                await _prescriptionService.GetMyDoctorPrescriptionsAsync(userId);
+
+            return Ok(prescriptions);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }

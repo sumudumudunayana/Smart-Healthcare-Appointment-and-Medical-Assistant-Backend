@@ -100,4 +100,18 @@ public class PaymentsController : ControllerBase
 
         return userId;
     }
+
+
+    // GET: api/Payments/receptionist
+    // Receptionist gets all payment transactions
+    [HttpGet("receptionist")]
+    [Authorize(Roles = "Receptionist")]
+    public async Task<ActionResult<List<PaymentResponse>>>
+        GetAllForReceptionist()
+    {
+        List<PaymentResponse> response =
+            await _paymentService.GetAllForReceptionistAsync();
+
+        return Ok(response);
+    }
 }

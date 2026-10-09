@@ -19,7 +19,9 @@ public class AppointmentsController : ControllerBase
         _appointmentService = appointmentService;
     }
 
+    // ============================================================
     // BOOK APPOINTMENT
+    // ============================================================
     [HttpPost]
     [Authorize(Roles = "Patient")]
     public async Task<ActionResult<AppointmentResponse>>
@@ -93,6 +95,40 @@ public class AppointmentsController : ControllerBase
                     .GetMyAppointmentsAsync(userId);
 
             return Ok(appointments);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+
+    [HttpGet("doctor/{doctorId:guid}/date/{date}")]
+    [Authorize(Roles = "Patient")]
+    public async Task<ActionResult<List<AppointmentResponse>>>
+    GetDoctorAppointmentsByDate(
+        Guid doctorId,
+        DateOnly date)
+    {
+        try
+        {
+            List<AppointmentResponse> appointments =
+                await _appointmentService
+                    .GetDoctorAppointmentsByDateAsync(
+                        doctorId,
+                        date);
+
+            return Ok(appointments);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
         }
         catch (InvalidOperationException ex)
         {
@@ -235,5 +271,34 @@ public class AppointmentsController : ControllerBase
                 message = ex.Message
             });
         }
+    }
+
+
+
+    [HttpGet("admin")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<List<AppointmentResponse>>>
+    GetAllForAdmin()
+    {
+        List<AppointmentResponse> appointments =
+            await _appointmentService.GetAllForAdminAsync();
+
+        return Ok(appointments);
+    }
+
+
+    // ============================================================
+    // GET ALL APPOINTMENTS FOR RECEPTIONIST
+    // ============================================================
+    [HttpGet("receptionist")]
+    [Authorize(Roles = "Receptionist")]
+    public async Task<ActionResult<List<AppointmentResponse>>>
+        GetAllForReceptionist()
+    {
+        List<AppointmentResponse> appointments =
+            await _appointmentService
+                .GetAllForReceptionistAsync();
+
+        return Ok(appointments);
     }
 }

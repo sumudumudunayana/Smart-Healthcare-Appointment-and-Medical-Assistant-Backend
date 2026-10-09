@@ -103,6 +103,39 @@ public class MedicalRecordsController : ControllerBase
     }
 
 
+    [HttpGet("doctor/my")]
+    [Authorize(Roles = "Doctor")]
+    public async Task<ActionResult<List<MedicalRecordResponse>>>
+    GetMyDoctorRecords()
+    {
+        string? userIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(userIdClaim, out Guid userId))
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid user identity."
+            });
+        }
+
+        try
+        {
+            List<MedicalRecordResponse> records =
+                await _medicalRecordService.GetMyDoctorRecordsAsync(userId);
+
+            return Ok(records);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+
     [HttpGet("my")]
     [Authorize(Roles = "Patient")]
     public async Task<ActionResult<List<MedicalRecordResponse>>> GetMyRecords()
