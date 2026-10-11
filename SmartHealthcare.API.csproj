@@ -25,4 +25,10 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+  <Compile Remove="SmartHealthcare.API.Tests/**/*.cs" />
+  <Content Remove="SmartHealthcare.API.Tests/**" />
+  <None Remove="SmartHealthcare.API.Tests/**" />
+</ItemGroup>
+
 </Project>
