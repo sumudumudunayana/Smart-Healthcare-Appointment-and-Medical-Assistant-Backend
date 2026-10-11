@@ -46,10 +46,10 @@ public class HealthcareApiFactory : WebApplicationFactory<Program>
                 });
         });
 
-        // Enable diagnostic logging in the integration-test host.
+        // Keep expected authentication challenges from obscuring test results.
         builder.ConfigureLogging(logging =>
         {
-            logging.SetMinimumLevel(LogLevel.Debug);
+            logging.SetMinimumLevel(LogLevel.Warning);
         });
 
         builder.ConfigureServices(services =>
@@ -99,56 +99,6 @@ public class HealthcareApiFactory : WebApplicationFactory<Program>
                     options.TokenValidationParameters.ClockSkew =
                         TimeSpan.Zero;
 
-                    // Log authentication failures without disabling validation.
-                    var previousAuthenticationFailed =
-                        options.Events?.OnAuthenticationFailed;
-
-                    var previousChallenge =
-                        options.Events?.OnChallenge;
-
-                    options.Events ??= new JwtBearerEvents();
-
-                    options.Events.OnAuthenticationFailed = async context =>
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine(
-                            "========== JWT VALIDATION FAILURE ==========");
-
-                        Console.WriteLine(
-                            context.Exception.ToString());
-
-                        Console.WriteLine(
-                            "============================================");
-
-                        Console.WriteLine();
-
-                        if (previousAuthenticationFailed != null)
-                        {
-                            await previousAuthenticationFailed(context);
-                        }
-                    };
-
-                    options.Events.OnChallenge = async context =>
-                    {
-                        Console.WriteLine();
-                        Console.WriteLine(
-                            "========== JWT AUTHENTICATION CHALLENGE ==========");
-
-                        Console.WriteLine($"Error: {context.Error}");
-
-                        Console.WriteLine(
-                            $"Description: {context.ErrorDescription}");
-
-                        Console.WriteLine(
-                            "==================================================");
-
-                        Console.WriteLine();
-
-                        if (previousChallenge != null)
-                        {
-                            await previousChallenge(context);
-                        }
-                    };
                 });
         });
     }
