@@ -5,9 +5,9 @@ WORKDIR /src
 
 COPY . .
 
-RUN dotnet restore "SmartHealthcare.API/SmartHealthcare.API.csproj"
+RUN dotnet restore "SmartHealthcare.API.csproj"
 
-RUN dotnet publish "SmartHealthcare.API/SmartHealthcare.API.csproj" \
+RUN dotnet publish "SmartHealthcare.API.csproj" \
     -c Release \
     -o /app/publish \
     --no-restore
