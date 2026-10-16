@@ -102,6 +102,26 @@ public class AuthService
             .Include(u => u.Role)
             .FirstOrDefaultAsync(u => u.Email.ToLower() == email);
 
+            Console.WriteLine(
+    $"[LOGIN DEBUG] User found: {user != null}"
+);
+
+if (user != null)
+{
+    Console.WriteLine(
+        $"[LOGIN DEBUG] Account status: {user.Status}"
+    );
+
+    Console.WriteLine(
+        $"[LOGIN DEBUG] Role loaded: {user.Role?.RoleName ?? "NULL"}"
+    );
+
+    Console.WriteLine(
+        $"[LOGIN DEBUG] Hash format valid: " +
+        $"{user.PasswordHash.Split('.').Length == 3}"
+    );
+}
+
         if (user == null)
         {
             throw new UnauthorizedAccessException(
