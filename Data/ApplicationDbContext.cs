@@ -14,54 +14,29 @@ public class ApplicationDbContext : DbContext
     // DbSets
 
     public DbSet<Role> Roles => Set<Role>();
-
     public DbSet<User> Users => Set<User>();
-
     public DbSet<Patient> Patients => Set<Patient>();
-
     public DbSet<Doctor> Doctors => Set<Doctor>();
-
     public DbSet<Department> Departments => Set<Department>();
-
     public DbSet<Specialization> Specializations => Set<Specialization>();
-
     public DbSet<DoctorSchedule> DoctorSchedules => Set<DoctorSchedule>();
-
     public DbSet<DoctorLeave> DoctorLeaves => Set<DoctorLeave>();
-
     public DbSet<Appointment> Appointments => Set<Appointment>();
-
     public DbSet<MedicalRecord> MedicalRecords => Set<MedicalRecord>();
-
     public DbSet<Prescription> Prescriptions => Set<Prescription>();
-
     public DbSet<LabReport> LabReports => Set<LabReport>();
-
     public DbSet<Bill> Bills => Set<Bill>();
-
     public DbSet<Payment> Payments => Set<Payment>();
-
     public DbSet<Notification> Notifications => Set<Notification>();
-
     public DbSet<PatientAllergy> PatientAllergies => Set<PatientAllergy>();
-
     public DbSet<ChronicCondition> ChronicConditions => Set<ChronicCondition>();
-
     public DbSet<InsurancePolicy> InsurancePolicies => Set<InsurancePolicy>();
-
     public DbSet<InsuranceClaim> InsuranceClaims => Set<InsuranceClaim>();
-
     public DbSet<AIWorkflow> AIWorkflows => Set<AIWorkflow>();
-
     public DbSet<AIWorkflowStep> AIWorkflowSteps => Set<AIWorkflowStep>();
-
     public DbSet<AIRecommendation> AIRecommendations => Set<AIRecommendation>();
-
     public DbSet<AIApproval> AIApprovals => Set<AIApproval>();
-
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
-
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

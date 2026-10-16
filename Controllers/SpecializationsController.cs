@@ -18,9 +18,8 @@ public class SpecializationsController : ControllerBase
     }
 
     [HttpGet]
-    [Authorize(Roles = "Administrator")]
-    public async Task<ActionResult<List<SpecializationResponse>>>
-        GetAll()
+    [Authorize]
+    public async Task<ActionResult<List<SpecializationResponse>>> GetAll()
     {
         List<SpecializationResponse> specializations =
             await _specializationService.GetAllAsync();

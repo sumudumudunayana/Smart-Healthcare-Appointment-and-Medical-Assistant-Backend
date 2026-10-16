@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using SmartHealthcare.API.Data;
 using SmartHealthcare.API.DTOs.Appointments;
 using SmartHealthcare.API.Models;
-
 namespace SmartHealthcare.API.Services;
 
 public class AppointmentService
@@ -111,6 +110,24 @@ public class AppointmentService
             );
         }
 
+        DateTime sriLankaNow =
+            DateTimeOffset.UtcNow
+        .ToOffset(TimeSpan.FromHours(5.5))
+        .DateTime;
+
+        DateOnly sriLankaToday =
+            DateOnly.FromDateTime(sriLankaNow);
+
+        TimeOnly sriLankaCurrentTime =
+            TimeOnly.FromDateTime(sriLankaNow);
+
+        if (request.AppointmentDate == sriLankaToday &&
+            request.AppointmentTime <= sriLankaCurrentTime)
+        {
+            throw new ArgumentException(
+                "Appointment time cannot be in the past.");
+        }
+
         // --------------------------------------------------------
         // Validate appointment day matches schedule
         // --------------------------------------------------------
@@ -141,13 +158,12 @@ public class AppointmentService
         // Prevent double booking
         // --------------------------------------------------------
         bool alreadyBooked =
-            await _context.Appointments
-                .AnyAsync(a =>
-                    a.DoctorId == request.DoctorId &&
-                    a.AppointmentDate ==
-                        request.AppointmentDate &&
-                    a.AppointmentTime ==
-                        request.AppointmentTime);
+      await _context.Appointments
+          .AnyAsync(a =>
+              a.DoctorId == request.DoctorId &&
+              a.AppointmentDate == request.AppointmentDate &&
+              a.AppointmentTime == request.AppointmentTime &&
+              a.Status != "Cancelled");
 
         if (alreadyBooked)
         {
@@ -671,5 +687,130 @@ public class AppointmentService
                 CreatedAt = a.CreatedAt
             })
             .ToListAsync();
+    }
+
+
+    public async Task<AppointmentResponse> CreateForReceptionistAsync(
+    CreateReceptionistAppointmentRequest request)
+    {
+        var patient = await _context.Patients
+            .Include(p => p.User)
+            .FirstOrDefaultAsync(p => p.PatientId == request.PatientId);
+
+        if (patient == null)
+        {
+            throw new ArgumentException(
+                "The selected patient was not found.");
+        }
+
+        if (patient.User == null ||
+            !patient.User.Status.Equals(
+                "Active",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The selected patient account is not active.");
+        }
+
+        var doctor = await _context.Doctors
+            .Include(d => d.User)
+            .FirstOrDefaultAsync(d => d.DoctorId == request.DoctorId);
+
+        if (doctor == null)
+        {
+            throw new ArgumentException(
+                "The selected doctor was not found.");
+        }
+
+        if (doctor.User == null ||
+            !doctor.User.Status.Equals(
+                "Active",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The selected doctor is not active.");
+        }
+
+        var schedule = await _context.DoctorSchedules
+            .FirstOrDefaultAsync(s =>
+                s.ScheduleId == request.ScheduleId);
+
+        if (schedule == null)
+        {
+            throw new ArgumentException(
+                "The selected schedule was not found.");
+        }
+
+        if (schedule.DoctorId != request.DoctorId)
+        {
+            throw new ArgumentException(
+                "The selected schedule does not belong to the selected doctor.");
+        }
+
+        if (!schedule.AvailabilityStatus.Equals(
+                "Available",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "The selected schedule is currently unavailable.");
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+
+        if (request.AppointmentDate < today)
+        {
+            throw new ArgumentException(
+                "Appointment date cannot be in the past.");
+        }
+
+        if (!request.AppointmentDate.DayOfWeek.ToString().Equals(
+                schedule.DayOfWeek,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "The selected appointment date does not match the doctor's schedule.");
+        }
+
+        if (request.AppointmentTime < schedule.StartTime ||
+            request.AppointmentTime >= schedule.EndTime)
+        {
+            throw new ArgumentException(
+                "The selected appointment time is outside the doctor's schedule.");
+        }
+
+        var alreadyBooked = await _context.Appointments
+            .AnyAsync(a =>
+                a.DoctorId == request.DoctorId &&
+                a.AppointmentDate == request.AppointmentDate &&
+                a.AppointmentTime == request.AppointmentTime &&
+                a.Status != "Cancelled");
+
+        if (alreadyBooked)
+        {
+            throw new InvalidOperationException(
+                "The selected appointment time is already booked.");
+        }
+
+        var appointment = new Appointment
+        {
+            AppointmentId = Guid.NewGuid(),
+            PatientId = patient.PatientId,
+            DoctorId = request.DoctorId,
+            ScheduleId = request.ScheduleId,
+            AppointmentDate = request.AppointmentDate,
+            AppointmentTime = request.AppointmentTime,
+            Status = "Scheduled",
+            Symptoms = string.IsNullOrWhiteSpace(request.Symptoms)
+                ? null
+                : request.Symptoms.Trim(),
+            CreatedAt = DateTime.UtcNow
+        };
+
+        _context.Appointments.Add(appointment);
+
+        await _context.SaveChangesAsync();
+
+        return await BuildAppointmentResponseAsync(
+            appointment.AppointmentId);
     }
 }
