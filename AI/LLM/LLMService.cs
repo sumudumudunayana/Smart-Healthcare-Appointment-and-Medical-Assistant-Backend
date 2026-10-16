@@ -10,6 +10,8 @@ public class LLMService : ILLMService
     private readonly Client _client;
     private readonly string _model;
 
+    private const int MaxAttempts = 3;
+
     public LLMService(IConfiguration configuration)
     {
         string? apiKey = configuration["Gemini:ApiKey"];
@@ -46,11 +48,11 @@ public class LLMService : ILLMService
             Temperature = 0.1
         };
 
-        var response =
-            await _client.Models.GenerateContentAsync(
+        var response = await ExecuteWithRetryAsync(
+            () => _client.Models.GenerateContentAsync(
                 model: _model,
                 contents: userPrompt,
-                config: config);
+                config: config));
 
         string? responseText =
             response.Candidates?
@@ -70,79 +72,86 @@ public class LLMService : ILLMService
     }
 
     public async Task<T> GenerateStructuredAsync<T>(
-    string systemPrompt,
-    string userPrompt,
-    string jsonSchema)
-{
-    GenerateContentConfig config = new()
+        string systemPrompt,
+        string userPrompt,
+        string jsonSchema)
     {
-        SystemInstruction = new Content
+        GenerateContentConfig config = new()
         {
-            Parts =
-            [
-                new Part
-                {
-                    Text = systemPrompt
-                }
-            ]
-        },
+            SystemInstruction = new Content
+            {
+                Parts =
+                [
+                    new Part
+                    {
+                        Text = systemPrompt
+                    }
+                ]
+            },
 
-        ResponseMimeType = "application/json",
+            ResponseMimeType = "application/json",
+            ResponseJsonSchema = JsonNode.Parse(jsonSchema),
+            Temperature = 0.1
+        };
 
-        ResponseJsonSchema =
-            JsonNode.Parse(jsonSchema),
+        var response = await ExecuteWithRetryAsync(
+            () => _client.Models.GenerateContentAsync(
+                model: _model,
+                contents: userPrompt,
+                config: config));
 
-        Temperature = 0.1
-    };
+        string? responseText =
+            response.Candidates?
+                .FirstOrDefault()?
+                .Content?
+                .Parts?
+                .FirstOrDefault()?
+                .Text;
 
-    var response =
-        await _client.Models.GenerateContentAsync(
-            model: _model,
-            contents: userPrompt,
-            config: config);
+        if (string.IsNullOrWhiteSpace(responseText))
+        {
+            throw new InvalidOperationException(
+                "Gemini returned an empty structured response.");
+        }
 
-    string? responseText =
-        response.Candidates?
-            .FirstOrDefault()?
-            .Content?
-            .Parts?
-            .FirstOrDefault()?
-            .Text;
-
-    if (string.IsNullOrWhiteSpace(responseText))
-    {
-        throw new InvalidOperationException(
-            "Gemini returned an empty structured response.");
-    }
-
-    T? result =
-        JsonSerializer.Deserialize<T>(
+        T? result = JsonSerializer.Deserialize<T>(
             responseText,
             new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-    if (result == null)
-    {
-        throw new InvalidOperationException(
-            "Gemini response could not be converted to the requested type.");
+        if (result == null)
+        {
+            throw new InvalidOperationException(
+                "Gemini response could not be converted to the requested type.");
+        }
+
+        return result;
     }
 
-    return result;
-}
-
-    private static string CreateJsonSchema<T>()
+    private static async Task<T> ExecuteWithRetryAsync<T>(
+        Func<Task<T>> operation)
     {
-        string schema =
-            JsonSerializer.Serialize(
-                typeof(T),
-                new JsonSerializerOptions());
-
-        return """
+        for (int attempt = 1; attempt <= MaxAttempts; attempt++)
         {
-            "type": "object"
+            try
+            {
+                return await operation();
+            }
+            catch (ServerError) when (attempt < MaxAttempts)
+            {
+                // Wait 1 second before attempt 2,
+                // then 2 seconds before attempt 3.
+                int delayMilliseconds =
+                    1000 * (int)Math.Pow(2, attempt - 1);
+
+                await Task.Delay(delayMilliseconds);
+            }
         }
-        """;
+
+        // This line is only a defensive fallback.
+        throw new InvalidOperationException(
+            "Gemini request failed after all retry attempts.");
     }
 }
