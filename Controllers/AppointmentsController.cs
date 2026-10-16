@@ -107,7 +107,7 @@ public class AppointmentsController : ControllerBase
 
 
     [HttpGet("doctor/{doctorId:guid}/date/{date}")]
-    [Authorize(Roles = "Patient")]
+    [Authorize(Roles = "Patient,Receptionist")]
     public async Task<ActionResult<List<AppointmentResponse>>>
     GetDoctorAppointmentsByDate(
         Guid doctorId,
@@ -300,5 +300,29 @@ public class AppointmentsController : ControllerBase
                 .GetAllForReceptionistAsync();
 
         return Ok(appointments);
+    }
+
+    [HttpPost("receptionist")]
+    [Authorize(Roles = "Receptionist")]
+    public async Task<ActionResult<AppointmentResponse>>
+    CreateForReceptionist(
+        CreateReceptionistAppointmentRequest request)
+    {
+        try
+        {
+            var appointment =
+                await _appointmentService.CreateForReceptionistAsync(
+                    request);
+
+            return Ok(appointment);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
     }
 }

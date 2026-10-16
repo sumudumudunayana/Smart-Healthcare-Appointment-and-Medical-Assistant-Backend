@@ -3,16 +3,43 @@ using SmartHealthcare.API.Data;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using SmartHealthcare.API.Services;
 using Microsoft.OpenApi;
+using SmartHealthcare.API.Services;
+using SmartHealthcare.API.AI.Orchestration;
+using SmartHealthcare.API.AI.Agents;
+using SmartHealthcare.API.AI.LLM;
+using SmartHealthcare.API.AI.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// =========================================================
+// CORS Configuration
+// =========================================================
+
+var allowedOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>()
+    ?? [
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174"
+    ];
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
 // =========================================================
 // Database Configuration
 // =========================================================
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration
+    .GetConnectionString("DefaultConnection");
 
 if (string.IsNullOrWhiteSpace(connectionString))
 {
@@ -24,6 +51,9 @@ if (string.IsNullOrWhiteSpace(connectionString))
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(connectionString));
 
+// =========================================================
+// JWT Authentication Configuration
+// =========================================================
 
 var jwtKey = builder.Configuration["Jwt:Key"];
 var jwtIssuer = builder.Configuration["Jwt:Issuer"];
@@ -61,6 +91,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// =========================================================
+// Application Service Registrations
+// =========================================================
+
 builder.Services.AddScoped<PasswordService>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<UserService>();
@@ -77,9 +111,46 @@ builder.Services.AddScoped<PaymentService>();
 builder.Services.AddScoped<InsuranceClaimService>();
 builder.Services.AddScoped<InsurancePolicyService>();
 builder.Services.AddScoped<NotificationService>();
+builder.Services.AddScoped<ReceptionistService>();
+builder.Services.AddScoped<PatientService>();
 
 // =========================================================
-// Services
+// AI Services
+// =========================================================
+
+// AI approval service
+builder.Services.AddScoped<IAIApprovalService, AIApprovalService>();
+
+// AI workflow and recommendation services
+builder.Services.AddScoped<IAIWorkflowService, AIWorkflowService>();
+builder.Services.AddScoped<IAIRecommendationService, AIRecommendationService>();
+
+// AI orchestrator
+builder.Services.AddScoped<IAIOrchestrator, AIOrchestrator>();
+
+// Gemini LLM service
+builder.Services.AddScoped<ILLMService, LLMService>();
+
+// Appointment scheduling tool
+builder.Services.AddScoped<IAppointmentSchedulingTool, AppointmentSchedulingTool>();
+
+// Healthcare AI agents
+builder.Services.AddScoped<IHealthcareAgent, AppointmentSchedulingAgent>();
+builder.Services.AddScoped<IHealthcareAgent, PatientTriageAgent>();
+
+// Medical summary agent
+builder.Services.AddScoped<IHealthcareAgent, MedicalSummaryAgent>();
+
+// Billing validation agent
+builder.Services.AddScoped<IHealthcareAgent, BillingValidationAgent>();
+
+// AI tools
+builder.Services.AddScoped<IAppointmentSchedulingTool, AppointmentSchedulingTool>();
+builder.Services.AddScoped<IMedicalSummaryTool, MedicalSummaryTool>();
+builder.Services.AddScoped<IBillingValidationTool, BillingValidationTool>();
+
+// =========================================================
+// Controllers and Swagger
 // =========================================================
 
 builder.Services.AddControllers();
@@ -107,8 +178,11 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
-var app = builder.Build();
+// =========================================================
+// Build Application
+// =========================================================
 
+var app = builder.Build();
 
 // =========================================================
 // HTTP Request Pipeline
@@ -121,6 +195,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 

@@ -8,8 +8,7 @@ public class AIRecommendationService : IAIRecommendationService
 {
     private readonly ApplicationDbContext _context;
 
-    public AIRecommendationService(
-        ApplicationDbContext context)
+    public AIRecommendationService(ApplicationDbContext context)
     {
         _context = context;
     }
@@ -20,12 +19,9 @@ public class AIRecommendationService : IAIRecommendationService
         string recommendation,
         string? reasoning = null)
     {
-        AIWorkflow? workflow =
-            await _context.AIWorkflows
-                .FirstOrDefaultAsync(
-                    existingWorkflow =>
-                        existingWorkflow.WorkflowId ==
-                        workflowId);
+        AIWorkflow? workflow = await _context.AIWorkflows
+            .FirstOrDefaultAsync(
+                existingWorkflow => existingWorkflow.WorkflowId == workflowId);
 
         if (workflow == null)
         {
@@ -44,27 +40,21 @@ public class AIRecommendationService : IAIRecommendationService
             CreatedAt = DateTime.UtcNow
         };
 
-        _context.AIRecommendations.Add(
-            aiRecommendation);
+        _context.AIRecommendations.Add(aiRecommendation);
 
         await _context.SaveChangesAsync();
 
         return aiRecommendation;
     }
 
-    public async Task<List<AIRecommendation>>
-        GetWorkflowRecommendationsAsync(
-            Guid workflowId)
+    public async Task<List<AIRecommendation>> GetWorkflowRecommendationsAsync(
+        Guid workflowId)
     {
         return await _context.AIRecommendations
             .AsNoTracking()
-            .Where(
-                recommendation =>
-                    recommendation.WorkflowId ==
-                    workflowId)
-            .OrderBy(
-                recommendation =>
-                    recommendation.CreatedAt)
+            .Where(recommendation =>
+                recommendation.WorkflowId == workflowId)
+            .OrderBy(recommendation => recommendation.CreatedAt)
             .ToListAsync();
     }
 }
