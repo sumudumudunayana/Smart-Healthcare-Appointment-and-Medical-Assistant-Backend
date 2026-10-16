@@ -28,10 +28,15 @@ var allowedOrigins = builder.Configuration
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("Frontend", policy =>
-        policy.WithOrigins(allowedOrigins)
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy
+            .WithOrigins(
+                "https://smart-healthcare-appointment-and-me.vercel.app"
+            )
             .AllowAnyHeader()
-            .AllowAnyMethod());
+            .AllowAnyMethod();
+    });
 });
 
 // =========================================================
