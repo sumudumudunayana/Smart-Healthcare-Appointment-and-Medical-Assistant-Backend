@@ -29,13 +29,38 @@ public class SpecializationsController : ControllerBase
 
     [HttpPost]
     [Authorize(Roles = "Administrator")]
-    public async Task<ActionResult<SpecializationResponse>>
-        Create(CreateSpecializationRequest request)
+    public async Task<ActionResult<SpecializationResponse>> Create(
+        [FromBody] CreateSpecializationRequest request)
     {
         try
         {
             SpecializationResponse specialization =
-                await _specializationService.CreateAsync(
+                await _specializationService.CreateAsync(request);
+
+            return Ok(specialization);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
+        }
+    }
+
+
+    [HttpPut("{specializationId:guid}")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<SpecializationResponse>> Update(
+    Guid specializationId,
+    [FromBody] UpdateSpecializationRequest request)
+    {
+        try
+        {
+            SpecializationResponse specialization =
+                await _specializationService.UpdateAsync(
+                    specializationId,
                     request
                 );
 
@@ -48,12 +73,40 @@ public class SpecializationsController : ControllerBase
                 message = ex.Message
             });
         }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new
+            {
+                message = ex.Message
+            });
+        }
         catch (InvalidOperationException ex)
         {
             return Conflict(new
             {
                 message = ex.Message
             });
+        }
+    }
+
+
+    [HttpDelete("{specializationId:guid}")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<IActionResult> Delete(Guid specializationId)
+    {
+        try
+        {
+            await _specializationService.DeleteAsync(specializationId);
+
+            return NoContent();
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(new { message = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { message = ex.Message });
         }
     }
 }
