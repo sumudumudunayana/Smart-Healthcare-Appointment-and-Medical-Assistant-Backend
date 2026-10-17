@@ -624,6 +624,9 @@ namespace SmartHealthcare.API.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -646,6 +649,8 @@ namespace SmartHealthcare.API.Migrations
                         .HasColumnType("uuid");
 
                     b.HasKey("NotificationId");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("UserId");
 
@@ -1176,6 +1181,11 @@ namespace SmartHealthcare.API.Migrations
 
             modelBuilder.Entity("SmartHealthcare.API.Models.Notification", b =>
                 {
+                    b.HasOne("SmartHealthcare.API.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("SmartHealthcare.API.Models.User", "User")
                         .WithMany("Notifications")
                         .HasForeignKey("UserId")

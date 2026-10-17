@@ -649,10 +649,20 @@ public class ApplicationDbContext : DbContext
             entity.Property(n => n.CreatedAt)
                 .IsRequired();
 
+            // Recipient relationship
             entity.HasOne(n => n.User)
                 .WithMany(u => u.Notifications)
                 .HasForeignKey(n => n.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Creator relationship
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(n => n.CreatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Improve queries for notifications created by a user
+            entity.HasIndex(n => n.CreatedByUserId);
         });
 
 

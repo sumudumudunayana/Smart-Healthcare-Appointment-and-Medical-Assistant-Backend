@@ -126,6 +126,36 @@ public class NotificationsController : ControllerBase
     }
 
 
+
+    // GET: api/Notifications/created-by-me
+    // Administrator or Receptionist retrieves notifications they created
+    [HttpGet("created-by-me")]
+    [Authorize(Roles = "Administrator,Receptionist")]
+    public async Task<ActionResult<List<NotificationResponse>>> GetCreatedByMe()
+    {
+        try
+        {
+            Guid userId = GetUserId();
+
+            List<NotificationResponse> response =
+                await _notificationService.GetCreatedByMeAsync(userId);
+
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Forbid();
+        }
+    }
+
+
     // GET: api/Notifications/users
     // Administrator or Receptionist gets users who can receive notifications
     [HttpGet("users")]
