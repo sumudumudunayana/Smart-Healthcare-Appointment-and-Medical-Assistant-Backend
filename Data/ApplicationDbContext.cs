@@ -230,6 +230,10 @@ public class ApplicationDbContext : DbContext
                 .IsRequired()
                 .HasMaxLength(100);
 
+            entity.Property(s => s.Description)
+                .IsRequired(false)
+                .HasMaxLength(1000);
+
             entity.HasIndex(s => s.Name)
                 .IsUnique();
         });
