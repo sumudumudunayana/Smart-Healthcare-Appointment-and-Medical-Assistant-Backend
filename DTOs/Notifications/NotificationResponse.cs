@@ -12,4 +12,7 @@ public class NotificationResponse
 
     public DateTime CreatedAt { get; set; }
     public DateTime? ReadAt { get; set; }
+    public string? RecipientName { get; set; }
+
+    public string? RecipientEmail { get; set; }
 }
