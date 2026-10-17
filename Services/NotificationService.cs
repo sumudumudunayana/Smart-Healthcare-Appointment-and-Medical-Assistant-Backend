@@ -14,11 +14,15 @@ public class NotificationService
         _context = context;
     }
 
+    // ============================================================
+    // CREATE NOTIFICATION
+    // ============================================================
+
     public async Task<NotificationResponse> CreateAsync(
         Guid userId,
         CreateNotificationRequest request)
     {
-        // Find the logged-in user
+        // Find the logged-in user who is creating the notification.
         User? currentUser = await _context.Users
             .FirstOrDefaultAsync(u => u.UserId == userId);
 
@@ -28,18 +32,22 @@ public class NotificationService
                 "User was not found.");
         }
 
-        // Only administrators and receptionists can manually
-        // create notifications for users.
-        if (currentUser.RoleId != Guid.Parse(
-                "11111111-1111-1111-1111-111111111111") &&
-            currentUser.RoleId != Guid.Parse(
-                "33333333-3333-3333-3333-333333333333"))
+        // Only administrators and receptionists can create
+        // notifications manually.
+        Guid administratorRoleId =
+            Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        Guid receptionistRoleId =
+            Guid.Parse("33333333-3333-3333-3333-333333333333");
+
+        if (currentUser.RoleId != administratorRoleId &&
+            currentUser.RoleId != receptionistRoleId)
         {
             throw new InvalidOperationException(
                 "Only administrators or receptionists can create notifications.");
         }
 
-        // Validate recipient
+        // Validate the recipient.
         User? recipient = await _context.Users
             .FirstOrDefaultAsync(u => u.UserId == request.UserId);
 
@@ -49,8 +57,8 @@ public class NotificationService
                 "Notification recipient was not found.");
         }
 
-        // Validate message
-        string message = request.Message.Trim();
+        // Validate the message.
+        string message = request.Message?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -58,9 +66,15 @@ public class NotificationService
                 "Notification message is required.");
         }
 
-        // Validate notification type
+        if (message.Length > 2000)
+        {
+            throw new ArgumentException(
+                "Notification message cannot exceed 2000 characters.");
+        }
+
+        // Validate the notification type.
         string notificationType =
-            request.NotificationType.Trim();
+            request.NotificationType?.Trim() ?? string.Empty;
 
         if (string.IsNullOrWhiteSpace(notificationType))
         {
@@ -68,10 +82,23 @@ public class NotificationService
                 "Notification type is required.");
         }
 
+        if (notificationType.Length > 50)
+        {
+            throw new ArgumentException(
+                "Notification type cannot exceed 50 characters.");
+        }
+
+        // Create the notification.
         var notification = new Notification
         {
             NotificationId = Guid.NewGuid(),
+
+            // The user who receives the notification.
             UserId = recipient.UserId,
+
+            // The administrator or receptionist who created it.
+            CreatedByUserId = currentUser.UserId,
+
             Message = message,
             NotificationType = notificationType,
             Status = "Unread",
@@ -85,10 +112,13 @@ public class NotificationService
         return MapToResponse(notification);
     }
 
+    // ============================================================
+    // GET NOTIFICATIONS RECEIVED BY THE LOGGED-IN USER
+    // ============================================================
+
     public async Task<List<NotificationResponse>> GetMyAsync(
         Guid userId)
     {
-        // Make sure the logged-in user exists
         bool userExists = await _context.Users
             .AnyAsync(u => u.UserId == userId);
 
@@ -115,6 +145,55 @@ public class NotificationService
             .ToListAsync();
     }
 
+    // ============================================================
+    // GET NOTIFICATIONS CREATED BY THE LOGGED-IN USER
+    // ============================================================
+
+    public async Task<List<NotificationResponse>> GetCreatedByMeAsync(
+        Guid userId)
+    {
+        bool userExists = await _context.Users
+            .AnyAsync(u => u.UserId == userId);
+
+        if (!userExists)
+        {
+            throw new InvalidOperationException(
+                "User was not found.");
+        }
+
+        return await _context.Notifications
+            .AsNoTracking()
+            .Where(n => n.CreatedByUserId == userId)
+            .OrderByDescending(n => n.CreatedAt)
+            .Select(n => new NotificationResponse
+            {
+                NotificationId = n.NotificationId,
+
+                // Recipient's user ID.
+                UserId = n.UserId,
+
+                // Recipient details for the receptionist's screen.
+                RecipientName = n.User != null
+                    ? n.User.FullName
+                    : "Unknown recipient",
+
+                RecipientEmail = n.User != null
+                    ? n.User.Email
+                    : string.Empty,
+
+                Message = n.Message,
+                NotificationType = n.NotificationType,
+                Status = n.Status,
+                CreatedAt = n.CreatedAt,
+                ReadAt = n.ReadAt
+            })
+            .ToListAsync();
+    }
+
+    // ============================================================
+    // MARK NOTIFICATION AS READ
+    // ============================================================
+
     public async Task<NotificationResponse?> MarkAsReadAsync(
         Guid userId,
         Guid notificationId)
@@ -128,14 +207,14 @@ public class NotificationService
             return null;
         }
 
-        // A user can only mark their own notification as read
+        // Only the recipient can mark the notification as read.
         if (notification.UserId != userId)
         {
             throw new UnauthorizedAccessException(
                 "You do not have permission to modify this notification.");
         }
 
-        // Avoid changing ReadAt repeatedly
+        // Preserve the original read timestamp.
         if (!string.Equals(
                 notification.Status,
                 "Read",
@@ -149,6 +228,30 @@ public class NotificationService
 
         return MapToResponse(notification);
     }
+
+    // ============================================================
+    // GET USERS WHO CAN RECEIVE NOTIFICATIONS
+    // ============================================================
+
+    public async Task<List<object>> GetNotificationUsersAsync()
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .OrderBy(u => u.FullName)
+            .Select(u => new
+            {
+                userId = u.UserId,
+                fullName = u.FullName,
+                email = u.Email,
+                status = u.Status
+            })
+            .Cast<object>()
+            .ToListAsync();
+    }
+
+    // ============================================================
+    // MAP NOTIFICATION TO RESPONSE
+    // ============================================================
 
     private static NotificationResponse MapToResponse(
         Notification notification)
@@ -164,22 +267,4 @@ public class NotificationService
             ReadAt = notification.ReadAt
         };
     }
-
-
-
-    public async Task<List<object>> GetNotificationUsersAsync()
-{
-    return await _context.Users
-        .AsNoTracking()
-        .OrderBy(u => u.FullName)
-        .Select(u => new
-        {
-            userId = u.UserId,
-            fullName = u.FullName,
-            email = u.Email,
-            status = u.Status
-        })
-        .Cast<object>()
-        .ToListAsync();
-}
 }

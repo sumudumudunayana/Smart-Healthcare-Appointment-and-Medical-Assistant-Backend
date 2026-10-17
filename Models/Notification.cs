@@ -4,7 +4,11 @@ public class Notification
 {
     public Guid NotificationId { get; set; }
 
+    // User who receives the notification
     public Guid UserId { get; set; }
+
+    // User who created the notification
+    public Guid? CreatedByUserId { get; set; }
 
     public string Message { get; set; } = string.Empty;
 
@@ -16,5 +20,6 @@ public class Notification
 
     public DateTime? ReadAt { get; set; }
 
+    // Navigation property for the recipient
     public User? User { get; set; }
 }
