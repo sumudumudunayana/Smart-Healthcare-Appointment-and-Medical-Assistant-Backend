@@ -99,4 +99,92 @@ public class UsersController : ControllerBase
 
         return Ok(users);
     }
+
+
+    [HttpPut("{userId:guid}")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<UserResponse>> UpdateUser(
+    Guid userId,
+    AdminUpdateUserRequest request)
+    {
+        try
+        {
+            UserResponse? user =
+                await _userService.UpdateUserAsync(userId, request);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message = "User was not found."
+                });
+            }
+
+            return Ok(user);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
+
+    [HttpPut("{userId:guid}/status")]
+    [Authorize(Roles = "Administrator")]
+    public async Task<ActionResult<UserResponse>> UpdateUserStatus(
+        Guid userId,
+        UpdateUserStatusRequest request)
+    {
+        string? currentUserIdClaim =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(currentUserIdClaim, out Guid currentUserId))
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid user identity."
+            });
+        }
+
+        // Prevent an administrator from accidentally deactivating
+        // their own account and locking themselves out.
+        if (currentUserId == userId &&
+            string.Equals(
+                request.Status?.Trim(),
+                "Inactive",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new
+            {
+                message = "You cannot deactivate your own account."
+            });
+        }
+
+        try
+        {
+            UserResponse? user =
+    await _userService.UpdateUserStatusAsync(
+        userId,
+        request.Status ?? string.Empty);
+
+            if (user == null)
+            {
+                return NotFound(new
+                {
+                    message = "User was not found."
+                });
+            }
+
+            return Ok(user);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                message = ex.Message
+            });
+        }
+    }
 }

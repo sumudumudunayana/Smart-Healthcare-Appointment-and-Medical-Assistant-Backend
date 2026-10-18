@@ -98,4 +98,95 @@ public class UserService
             })
             .ToListAsync();
     }
+
+
+    public async Task<UserResponse?> UpdateUserAsync(
+    Guid userId,
+    AdminUpdateUserRequest request)
+    {
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        string fullName = request.FullName.Trim();
+
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            throw new ArgumentException("Full name is required.");
+        }
+
+        user.FullName = fullName;
+        user.Phone = string.IsNullOrWhiteSpace(request.Phone)
+            ? null
+            : request.Phone.Trim();
+
+        await _context.SaveChangesAsync();
+
+        return new UserResponse
+        {
+            UserId = user.UserId,
+            FullName = user.FullName,
+            Email = user.Email,
+            Phone = user.Phone,
+            Role = user.Role?.RoleName ?? string.Empty,
+            Status = user.Status,
+            CreatedAt = user.CreatedAt
+        };
+    }
+
+    public async Task<UserResponse?> UpdateUserStatusAsync(
+        Guid userId,
+        string status)
+    {
+        var user = await _context.Users
+            .Include(u => u.Role)
+            .FirstOrDefaultAsync(u => u.UserId == userId);
+
+        if (user == null)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrWhiteSpace(status))
+        {
+            throw new ArgumentException("User status is required.");
+        }
+
+        string normalizedStatus = status.Trim();
+
+        if (!normalizedStatus.Equals(
+                "Active",
+                StringComparison.OrdinalIgnoreCase) &&
+            !normalizedStatus.Equals(
+                "Inactive",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException(
+                "Status must be either Active or Inactive.");
+        }
+
+        user.Status = normalizedStatus.Equals(
+            "Active",
+            StringComparison.OrdinalIgnoreCase)
+                ? "Active"
+                : "Inactive";
+
+        await _context.SaveChangesAsync();
+
+        return new UserResponse
+        {
+            UserId = user.UserId,
+            FullName = user.FullName,
+            Email = user.Email,
+            Phone = user.Phone,
+            Role = user.Role?.RoleName ?? string.Empty,
+            Status = user.Status,
+            CreatedAt = user.CreatedAt
+        };
+    }
 }
