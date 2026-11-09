@@ -9,9 +9,7 @@ public class BillingValidationAgent : IHealthcareAgent
 {
     private readonly ILLMService _llmService;
     private readonly IBillingValidationTool _billingValidationTool;
-
     public string AgentName => "BillingValidationAgent";
-
     public BillingValidationAgent(
         ILLMService llmService,
         IBillingValidationTool billingValidationTool)
@@ -19,7 +17,6 @@ public class BillingValidationAgent : IHealthcareAgent
         _llmService = llmService;
         _billingValidationTool = billingValidationTool;
     }
-
     public async Task<AgentResponse> ExecuteAsync(
         AgentRequest request,
         Guid workflowId)

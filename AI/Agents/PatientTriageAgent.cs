@@ -1,21 +1,16 @@
 using SmartHealthcare.API.AI.LLM;
 using SmartHealthcare.API.DTOs.AI;
-
 namespace SmartHealthcare.API.AI.Agents;
-
 public class PatientTriageAgent : IHealthcareAgent
 {
     private readonly ILLMService _llmService;
-
     public string AgentName =>
         "PatientTriageAgent";
-
     public PatientTriageAgent(
         ILLMService llmService)
     {
         _llmService = llmService;
     }
-
     public async Task<AgentResponse> ExecuteAsync(
         AgentRequest request,
         Guid workflowId)

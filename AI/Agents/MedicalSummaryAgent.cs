@@ -9,9 +9,7 @@ public class MedicalSummaryAgent : IHealthcareAgent
 {
     private readonly ILLMService _llmService;
     private readonly IMedicalSummaryTool _medicalSummaryTool;
-
     public string AgentName => "MedicalSummaryAgent";
-
     public MedicalSummaryAgent(
         ILLMService llmService,
         IMedicalSummaryTool medicalSummaryTool)
@@ -19,7 +17,6 @@ public class MedicalSummaryAgent : IHealthcareAgent
         _llmService = llmService;
         _medicalSummaryTool = medicalSummaryTool;
     }
-
     public async Task<AgentResponse> ExecuteAsync(
         AgentRequest request,
         Guid workflowId)
@@ -172,7 +169,6 @@ public class MedicalSummaryAgent : IHealthcareAgent
             ]
         }
         """;
-
         MedicalSummaryResult result =
             await _llmService.GenerateStructuredAsync<MedicalSummaryResult>(
                 systemPrompt,
