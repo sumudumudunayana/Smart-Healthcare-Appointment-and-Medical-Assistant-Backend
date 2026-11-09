@@ -1,7 +1,6 @@
 using SmartHealthcare.API.Models;
 
 namespace SmartHealthcare.API.AI.Orchestration;
-
 public interface IAIApprovalService
 {
     Task<AIApproval> CreateApprovalAsync(
