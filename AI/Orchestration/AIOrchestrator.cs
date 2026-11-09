@@ -5,14 +5,12 @@ using SmartHealthcare.API.DTOs.AI;
 using SmartHealthcare.API.Models;
 
 namespace SmartHealthcare.API.AI.Orchestration;
-
 public class AIOrchestrator : IAIOrchestrator
 {
     private readonly IEnumerable<IHealthcareAgent> _agents;
     private readonly IAIWorkflowService _workflowService;
     private readonly IAIApprovalService _approvalService;
     private readonly IAIRecommendationService _recommendationService;
-
     public AIOrchestrator(
         IEnumerable<IHealthcareAgent> agents,
         IAIWorkflowService workflowService,
@@ -24,7 +22,6 @@ public class AIOrchestrator : IAIOrchestrator
         _approvalService = approvalService;
         _recommendationService = recommendationService;
     }
-
     public async Task<AgentResponse> ProcessAsync(
         AgentRequest request)
     {
